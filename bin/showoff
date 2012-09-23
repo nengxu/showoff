@@ -2,11 +2,11 @@
 
 $LOAD_PATH.unshift File.join(File.dirname(__FILE__), '..', 'lib')
 require 'showoff'
-require 'showoff/version' 
+require 'showoff/version'
 require 'rubygems'
 require 'gli'
 
-include GLI
+include GLI::App
 
 version SHOWOFF_VERSION
 
@@ -100,7 +100,7 @@ command :serve do |c|
 
   c.desc 'Host or ip to run on'
   c.default_value "localhost"
-  c.flag [:h,:host]  
+  c.flag [:h,:host]
 
   c.desc 'JSON file used to describe presentation'
   c.default_value "showoff.json"
@@ -186,4 +186,4 @@ on_error do |exception|
   true
 end
 
-exit GLI.run(ARGV)
+exit run(ARGV)
