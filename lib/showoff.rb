@@ -80,7 +80,7 @@ class ShowOff < Sinatra::Application
     @asset_path = "./"
 
     # Initialize Markdown Configuration
-    #MarkdownConfig::setup(settings.pres_dir)
+    MarkdownConfig::setup(settings.pres_dir)
   end
 
   def self.pres_dir_current
@@ -143,6 +143,9 @@ class ShowOff < Sinatra::Application
       def empty?
         @text.strip == ""
       end
+      def skip?
+        @classes.include? 'skip'
+      end
     end
 
 
@@ -150,6 +153,9 @@ class ShowOff < Sinatra::Application
       if settings.encoding and content.respond_to?(:force_encoding)
         content.force_encoding(settings.encoding)
       end
+      engine_options = ShowOffUtils.showoff_renderer_options(settings.pres_dir)
+      @logger.debug "renderer: #{Tilt[:markdown].name}"
+      @logger.debug "render options: #{engine_options.inspect}"
 
       # if there are no !SLIDE markers, then make every H1 define a new slide
       unless content =~ /^\<?!SLIDE/m
@@ -171,7 +177,7 @@ class ShowOff < Sinatra::Application
         end
       end
 
-      slides.delete_if {|slide| slide.empty? }
+      slides.delete_if {|slide| slide.empty? || slide.skip? }
 
       final = ''
       if slides.size > 1
@@ -216,7 +222,7 @@ class ShowOff < Sinatra::Application
         else
           content += "<div class=\"#{content_classes.join(' ')}\" ref=\"#{name}\">\n"
         end
-        sl = Tilt[:markdown].new { slide.text }.render
+        sl = Tilt[:markdown].new(nil, nil, engine_options) { slide.text }.render
         sl = update_image_paths(name, sl, static, pdf)
         content += sl
         content += "</div>\n"
@@ -503,11 +509,7 @@ class ShowOff < Sinatra::Application
    def self.do_static(what)
       what = "index" if !what
 
-      # Nasty hack to get the actual ShowOff module
-      showoff = ShowOff.new
-      while !showoff.is_a?(ShowOff)
-        showoff = showoff.instance_variable_get(:@app)
-      end
+      showoff = ShowOff.new!
       name = showoff.instance_variable_get(:@pres_name)
       path = showoff.instance_variable_get(:@root_path)
       logger = showoff.instance_variable_get(:@logger)
